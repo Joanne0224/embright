@@ -299,11 +299,11 @@ button,input,select,textarea{font:inherit}
 
 <script>
 // ============================================================
-// 設定區:本機開發預設打 localhost:8080,部署到 Railway 後,
-// 把這裡改成你的 Railway 後端網址即可,例如:
-// const API_BASE = 'https://goal-tracker-production.up.railway.app/api';
+// 設定區:前端呼叫的後端 API 網址
+// 本機開發如果要接本機的 Spring Boot,改成 http://localhost:8080/api
+// 目前這裡固定指向 Railway 上部署好的正式後端網址
 // ============================================================
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = 'https://embright-production.up.railway.app/api';
 
 const DOMAIN_COLORS = {
   accent:  { bg:'#e6f0ff', text:'#1d4ed8' },
