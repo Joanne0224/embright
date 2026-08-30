@@ -9,6 +9,3 @@ backend/target/
 # 作業系統自己產生的檔案
 .DS_Store
 Thumbs.db
-
-# 重要:含有真實資料庫密碼的設定檔,絕對不能上傳到 GitHub
-backend/src/main/resources/application.properties
