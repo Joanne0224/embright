@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>築光 Embright</title>
+<style>
+:root{
+  --bg:#f5f6fa; --card:#ffffff; --text:#1a1d29; --muted:#6b7280; --border:#e6e7ec;
+  --primary:#4f46e5; --primary-dark:#3730a3; --primary-soft:#eef0fd;
+  --radius:14px; --shadow:0 6px 20px rgba(20,20,50,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:"Microsoft JhengHei","Noto Sans TC",Inter,sans-serif;color:var(--text)}
+button,input,select,textarea{font:inherit}
+.app{max-width:1100px;margin:0 auto;padding:0 24px 60px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:21px}
+.brand .dot{width:30px;height:30px;border-radius:9px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:15px}
+.coin-pill{background:#fff7e0;color:#a16207;font-weight:800;font-size:13px;padding:7px 14px;border-radius:999px;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:6px;background:var(--card);padding:5px;border-radius:12px;box-shadow:var(--shadow);margin-bottom:24px}
+.tabs button{flex:1;border:0;background:transparent;padding:11px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:700;font-size:14px;transition:.15s}
+.tabs button.active{background:var(--primary);color:#fff}
+.page{display:none;animation:fade .25s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.section-title{font-size:17px;font-weight:800;margin:0 0 14px}
+.muted{color:var(--muted);font-size:13px}
+
+/* 儀表板:面向卡片 */
+.domain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.domain-card{border-radius:var(--radius);padding:18px;cursor:pointer;transition:.15s;border:1px solid transparent;position:relative}
+.domain-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.domain-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.domain-card .name{font-weight:800;font-size:16px}
+.domain-card .count{font-size:13px;opacity:.85}
+.order-btns{display:flex;flex-direction:column;gap:2px}
+.order-btns button{border:0;background:rgba(255,255,255,.5);width:22px;height:18px;border-radius:5px;cursor:pointer;font-size:10px;line-height:1}
+.add-domain-card{border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;min-height:90px;color:var(--muted);cursor:pointer;font-weight:700}
+.add-domain-card:hover{border-color:var(--primary);color:var(--primary)}
+.reward-card{background:#fafafd;border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.reward-card .title{font-weight:800;font-size:15px;margin-bottom:6px}
+.reward-card .cost{color:#a16207;font-weight:700;font-size:13px;margin-bottom:12px}
+.reward-card .row{display:flex;gap:8px}
+.reward-card button.redeem:disabled{opacity:.4;cursor:not-allowed}
+
+/* 目標地圖 */
+.domain-picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.domain-pill{border:1px solid var(--border);background:#fff;padding:8px 16px;border-radius:999px;cursor:pointer;font-weight:700;font-size:13px;transition:.15s}
+.domain-pill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.goal-node{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.goal-row{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
+.goal-row:hover{background:#fafafd}
+.goal-row .caret{width:16px;color:var(--muted);transition:.15s}
+.goal-row.open .caret{transform:rotate(90deg)}
+.goal-title{font-weight:700;font-size:14px;flex:1}
+.goal-badge{font-size:11px;padding:2px 9px;border-radius:999px;font-weight:700}
+.badge-progress{background:#eef0fd;color:var(--primary)}
+.badge-done{background:#e7f7ec;color:#16a34a}
+.goal-children{display:none;padding:4px 14px 14px 34px;border-top:1px solid var(--border)}
+.goal-children.open{display:block}
+.add-inline{display:flex;gap:8px;margin-top:8px}
+.add-inline input,.add-inline select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+.add-inline input[type=text]{flex:1}
+.btn{border:0;border-radius:9px;padding:8px 14px;background:var(--primary);color:#fff;cursor:pointer;font-weight:700;font-size:13px;transition:.15s}
+.btn:hover{background:var(--primary-dark)}
+.btn.ghost{background:transparent;color:var(--primary);border:1px solid var(--primary)}
+.btn.small{padding:5px 10px;font-size:12px}
+.task-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px}
+.task-row input[type=checkbox]{width:17px;height:17px;accent-color:var(--primary);cursor:pointer}
+.task-row.done span{text-decoration:line-through;color:var(--muted)}
+
+/* 今日任務 */
+.today-item{display:flex;align-items:center;gap:12px;padding:13px 6px;border-bottom:1px solid var(--border)}
+.today-item:last-child{border-bottom:0}
+.today-item input[type=checkbox]{width:19px;height:19px;accent-color:var(--primary);cursor:pointer}
+.today-item .info{flex:1}
+.today-item .info .title{font-weight:700;font-size:14px}
+.today-item .info .path{font-size:12px;color:var(--muted);margin-top:2px}
+.today-item.done .title{text-decoration:line-through;color:var(--muted)}
+
+/* 完成紀錄 */
+.log-table{width:100%;border-collapse:collapse;font-size:13px}
+.log-table th,.log-table td{padding:11px 8px;border-bottom:1px solid var(--border);text-align:left}
+.log-table th{color:var(--muted);font-weight:700;font-size:12px}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
+
+.empty{text-align:center;color:var(--muted);padding:36px 0;font-size:13px}
+.toast{position:fixed;right:22px;bottom:22px;background:#1a1d29;color:#fff;padding:12px 18px;border-radius:10px;display:none;box-shadow:var(--shadow);font-size:13px;z-index:50}
+.modal-mask{position:fixed;inset:0;background:rgba(20,20,40,.35);display:none;align-items:center;justify-content:center;z-index:40}
+.modal-mask.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:22px;width:340px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 14px;font-size:16px}
+.modal .field{margin-bottom:12px}
+.modal .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.modal .field input,.modal .field select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.color-picks{display:flex;gap:8px}
+.color-picks span{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.color-picks span.selected{border-color:#1a1d29}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><span class="dot">光</span>築光 Embright</div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span class="coin-pill" id="coinPill">🪙 -- 枚</span>
+      <span class="muted" id="todayLabel"></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="active" data-page="dashboard">儀表板</button>
+    <button data-page="goalmap">目標地圖</button>
+    <button data-page="today">今日任務</button>
+    <button data-page="history">完成紀錄</button>
+    <button data-page="rewards">獎勵中心</button>
+  </div>
+
+  <!-- 儀表板 -->
+  <section id="dashboard" class="page active">
+    <div class="card" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <p class="section-title" style="margin:0">今日簽到</p>
+        <p class="muted" style="margin:4px 0 0">每天簽到可以拿 10 枚金幣</p>
+      </div>
+      <button class="btn" id="checkinBtn" onclick="doCheckin()">簽到 +10</button>
+    </div>
+    <div class="card">
+      <p class="section-title">面向總覽</p>
+      <div id="domainGrid" class="domain-grid"></div>
+    </div>
+  </section>
+
+  <!-- 目標地圖 -->
+  <section id="goalmap" class="page">
+    <div class="card">
+      <p class="section-title">目標地圖</p>
+      <div id="domainPicker" class="domain-picker"></div>
+      <div id="goalTree"></div>
+      <div id="addLongGoalForm"></div>
+    </div>
+  </section>
+
+  <!-- 今日任務 -->
+  <section id="today" class="page">
+    <div class="card">
+      <p class="section-title">今日任務</p>
+      <div id="todayList"></div>
+    </div>
+  </section>
+
+  <!-- 完成紀錄 -->
+  <section id="history" class="page">
+    <div class="card">
+      <p class="section-title">完成紀錄</p>
+      <table class="log-table">
+        <thead><tr><th>完成日期</th><th>面向</th><th>目標</th><th>任務</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+      <div id="logEmpty"></div>
+    </div>
+  </section>
+
+  <!-- 獎勵中心 -->
+  <section id="rewards" class="page">
+    <div class="card" style="margin-bottom:14px">
+      <p class="section-title">兌換獎勵</p>
+      <div id="rewardGrid" class="domain-grid"></div>
+      <div class="add-inline" style="margin-top:14px">
+        <input type="text" id="rewardTitleInput" placeholder="新增獎勵,例如:追一集喜歡的劇">
+        <input type="number" id="rewardCostInput" placeholder="所需金幣" min="1" style="width:110px">
+        <button class="btn small" onclick="submitNewReward()">新增</button>
+      </div>
+    </div>
+    <div class="card">
+      <p class="section-title">金幣紀錄</p>
+      <table class="log-table">
+        <thead><tr><th>時間</th><th>項目</th><th>金幣</th><th>備註</th></tr></thead>
+        <tbody id="coinLogBody"></tbody>
+      </table>
+      <div id="coinLogEmpty"></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-mask" id="domainModalMask">
+  <div class="modal">
+    <h3>新增面向</h3>
+    <div class="field">
+      <label>面向名稱</label>
+      <input type="text" id="domainNameInput" placeholder="例如:工作、學習、家庭、生活">
+    </div>
+    <div class="field">
+      <label>顏色</label>
+      <div class="color-picks" id="colorPicks"></div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost small" onclick="closeDomainModal()">取消</button>
+      <button class="btn small" onclick="submitNewDomain()">新增</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 設定區:本機開發預設打 localhost:8080,部署到 Railway 後,
+// 把這裡改成你的 Railway 後端網址即可,例如:
+// const API_BASE = 'https://goal-tracker-production.up.railway.app/api';
+// ============================================================
+const API_BASE = 'http://localhost:8080/api';
+
+const DOMAIN_COLORS = {
+  accent:  { bg:'#e6f0ff', text:'#1d4ed8' },
+  pro:     { bg:'#f1eafe', text:'#7c3aed' },
+  success: { bg:'#e7f7ec', text:'#16a34a' },
+  warning: { bg:'#fef3e2', text:'#d97706' },
+  danger:  { bg:'#fde8e8', text:'#dc2626' },
+  teal:    { bg:'#e2f6f2', text:'#0d9488' },
+};
+const COLOR_KEYS = Object.keys(DOMAIN_COLORS);
+
+let state = {
+  domains: [],
+  selectedDomainId: null,
+};
+
+// ---------- API 小工具 ----------
+async function api(path, options = {}) {
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body || body.success === false) {
+    const msg = (body && body.message) || ('連線失敗 (' + res.status + ')');
+    throw new Error(msg);
+  }
+  return body.data;
+}
+const apiGet = (path) => api(path);
+const apiPost = (path, data) => api(path, { method: 'POST', body: JSON.stringify(data) });
+const apiPut = (path, data) => api(path, { method: 'PUT', body: JSON.stringify(data) });
+const apiPatch = (path) => api(path, { method: 'PATCH' });
+const apiDelete = (path) => api(path, { method: 'DELETE' });
+
+function showToast(text, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.style.background = isError ? '#dc2626' : '#1a1d29';
+  t.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => (t.style.display = 'none'), 2200);
+}
+function fmtErr(e) { return e && e.message ? e.message : String(e); }
+
+// ---------- 分頁切換 ----------
+document.querySelectorAll('.tabs button').forEach((btn) => {
+  btn.addEventListener('click', () => switchPage(btn.dataset.page));
+});
+function switchPage(page) {
+  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.page === page));
+  document.querySelectorAll('.page').forEach((p) => p.classList.toggle('active', p.id === page));
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'goalmap') loadGoalMapPickers();
+  if (page === 'today') loadToday();
+  if (page === 'history') loadHistory();
+  if (page === 'rewards') loadRewards();
+}
+
+// ---------- 儀表板 ----------
+async function loadDashboard() {
+  try {
+    state.domains = await apiGet('/domains');
+  } catch (e) {
+    showToast('讀取面向失敗:' + fmtErr(e), true);
+    return;
+  }
+  const grid = document.getElementById('domainGrid');
+  grid.innerHTML = '';
+  state.domains.forEach((d, idx) => {
+    const c = DOMAIN_COLORS[d.color] || DOMAIN_COLORS.accent;
+    const card = document.createElement('div');
+    card.className = 'domain-card';
+    card.style.background = c.bg;
+    card.style.color = c.text;
+    card.innerHTML = `
+      <div class="head">
+        <span class="name">${escapeHtml(d.name)}</span>
+        <div class="order-btns">
+          <button title="往上移" ${idx === 0 ? 'disabled style="opacity:.3"' : ''} onclick="event.stopPropagation();reorderDomain(${d.id},'UP')">▲</button>
+          <button title="往下移" ${idx === state.domains.length - 1 ? 'disabled style="opacity:.3"' : ''} onclick="event.stopPropagation();reorderDomain(${d.id},'DOWN')">▼</button>
+        </div>
+      </div>
+      <div class="count">長期目標 ${d.longGoalCount} 個</div>
+    `;
+    card.addEventListener('click', () => {
+      state.selectedDomainId = d.id;
+      switchPage('goalmap');
+    });
+    grid.appendChild(card);
+  });
+  const addCard = document.createElement('div');
+  addCard.className = 'add-domain-card';
+  addCard.textContent = '+ 新增面向';
+  addCard.addEventListener('click', openDomainModal);
+  grid.appendChild(addCard);
+}
+
+async function reorderDomain(id, direction) {
+  try {
+    await api(`/domains/${id}/order?direction=${direction}`, { method: 'PATCH' });
+    loadDashboard();
+  } catch (e) {
+    showToast('調整順序失敗:' + fmtErr(e), true);
+  }
+}
+
+// ---------- 新增面向 Modal ----------
+let selectedColor = 'accent';
+function openDomainModal() {
+  const picks = document.getElementById('colorPicks');
+  picks.innerHTML = '';
+  COLOR_KEYS.forEach((key) => {
+    const span = document.createElement('span');
+    span.style.background = DOMAIN_COLORS[key].text;
+    span.className = key === selectedColor ? 'selected' : '';
+    span.onclick = () => { selectedColor = key; openDomainModal(); };
+    picks.appendChild(span);
+  });
+  document.getElementById('domainNameInput').value = '';
+  document.getElementById('domainModalMask').classList.add('open');
+}
+function closeDomainModal() {
+  document.getElementById('domainModalMask').classList.remove('open');
+}
+async function submitNewDomain() {
+  const name = document.getElementById('domainNameInput').value.trim();
+  if (!name) { showToast('請輸入面向名稱', true); return; }
+  try {
+    await apiPost('/domains', { name, color: selectedColor });
+    closeDomainModal();
+    showToast('面向已新增');
+    loadDashboard();
+  } catch (e) {
+    showToast('新增失敗:' + fmtErr(e), true);
+  }
+}
+
+// ---------- 目標地圖 ----------
+async function loadGoalMapPickers() {
+  try {
+    state.domains = await apiGet('/domains');
+  } catch (e) {
+    showToast('讀取面向失敗:' + fmtErr(e), true);
+    return;
+  }
+  if (!state.selectedDomainId && state.domains.length) {
+    state.selectedDomainId = state.domains[0].id;
+  }
+  const picker = document.getElementById('domainPicker');
+  picker.innerHTML = '';
+  state.domains.forEach((d) => {
+    const pill = document.createElement('div');
+    pill.className = 'domain-pill' + (d.id === state.selectedDomainId ? ' active' : '');
+    pill.textContent = d.name;
+    pill.onclick = () => { state.selectedDomainId = d.id; loadGoalMapPickers(); };
+    picker.appendChild(pill);
+  });
+  await renderGoalTree();
+}
+
+async function renderGoalTree() {
+  const treeEl = document.getElementById('goalTree');
+  const formEl = document.getElementById('addLongGoalForm');
+  if (!state.selectedDomainId) {
+    treeEl.innerHTML = '<div class="empty">請先新增一個面向</div>';
+    formEl.innerHTML = '';
+    return;
+  }
+  treeEl.innerHTML = '載入中...';
+  let longGoals;
+  try {
+    longGoals = await apiGet(`/goals?domainId=${state.selectedDomainId}&type=LONG`);
+  } catch (e) {
+    treeEl.innerHTML = '<div class="empty">讀取失敗:' + escapeHtml(fmtErr(e)) + '</div>';
+    return;
+  }
+  treeEl.innerHTML = '';
+  if (!longGoals.length) {
+    treeEl.innerHTML = '<div class="empty">這個面向還沒有長期目標,新增一個開始吧</div>';
+  }
+  longGoals.forEach((g) => treeEl.appendChild(buildGoalNode(g, 'LONG')));
+
+  formEl.innerHTML = '';
+  formEl.appendChild(buildAddGoalInline('LONG', null, () => renderGoalTree()));
+}
+
+function buildGoalNode(goal, level) {
+  const wrap = document.createElement('div');
+  wrap.className = 'goal-node';
+
+  const row = document.createElement('div');
+  row.className = 'goal-row';
+  const badge = goal.status === 'COMPLETED'
+    ? '<span class="goal-badge badge-done">已達成</span>'
+    : '<span class="goal-badge badge-progress">進行中</span>';
+  row.innerHTML = `
+    <span class="caret">${goal.childCount > 0 || level === 'SHORT' ? '▶' : ''}</span>
+    <span class="goal-title">${escapeHtml(goal.title)}</span>
+    ${badge}
+  `;
+
+  if (goal.status !== 'COMPLETED') {
+    const completeBtn = document.createElement('button');
+    completeBtn.className = 'btn small ghost';
+    completeBtn.textContent = '標記達成 🪙x2';
+    completeBtn.style.marginLeft = '6px';
+    completeBtn.onclick = async (ev) => {
+      ev.stopPropagation();
+      try {
+        await api(`/goals/${goal.id}/complete`, { method: 'PATCH' });
+        showToast('目標已達成,+20 金幣(雙倍獎勵)');
+        refreshCoinPill();
+        renderGoalTree();
+      } catch (e) {
+        showToast('操作失敗:' + fmtErr(e), true);
+      }
+    };
+    row.appendChild(completeBtn);
+  }
+
+  const childrenEl = document.createElement('div');
+  childrenEl.className = 'goal-children';
+  let loaded = false;
+
+  row.addEventListener('click', async () => {
+    const isOpen = childrenEl.classList.toggle('open');
+    row.classList.toggle('open', isOpen);
+    if (isOpen && !loaded) {
+      loaded = true;
+      await fillChildren(childrenEl, goal, level);
+    }
+  });
+
+  wrap.appendChild(row);
+  wrap.appendChild(childrenEl);
+  return wrap;
+}
+
+async function fillChildren(container, goal, level) {
+  container.innerHTML = '載入中...';
+  if (level === 'SHORT') {
+    // 短期目標底下顯示任務清單 + 新增任務表單
+    let tasks;
+    try {
+      tasks = await apiGet(`/tasks?goalId=${goal.id}`);
+    } catch (e) {
+      container.innerHTML = '讀取任務失敗';
+      return;
+    }
+    container.innerHTML = '';
+    if (!tasks.length) {
+      const empty = document.createElement('div');
+      empty.className = 'muted';
+      empty.textContent = '還沒有任務';
+      container.appendChild(empty);
+    }
+    tasks.forEach((t) => container.appendChild(buildTaskRow(t, () => fillChildren(container, goal, level))));
+    container.appendChild(buildAddTaskInline(goal.id, () => fillChildren(container, goal, level)));
+    return;
+  }
+
+  const nextType = level === 'LONG' ? 'MID' : 'SHORT';
+  let children;
+  try {
+    children = await apiGet(`/goals/${goal.id}/children`);
+  } catch (e) {
+    container.innerHTML = '讀取子目標失敗';
+    return;
+  }
+  container.innerHTML = '';
+  if (!children.length) {
+    const empty = document.createElement('div');
+    empty.className = 'muted';
+    empty.style.marginBottom = '8px';
+    empty.textContent = level === 'LONG' ? '還沒有中期目標' : '還沒有短期目標';
+    container.appendChild(empty);
+  }
+  children.forEach((c) => container.appendChild(buildGoalNode(c, nextType)));
+  container.appendChild(buildAddGoalInline(nextType, goal.id, async () => {
+    container.innerHTML = '';
+    await fillChildren(container, goal, level);
+  }, goal.domainId));
+}
+
+function buildTaskRow(task, onChange) {
+  const row = document.createElement('div');
+  row.className = 'task-row' + (task.completed ? ' done' : '');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = task.completed;
+  cb.addEventListener('change', async () => {
+    try {
+      if (cb.checked) {
+        await apiPatch(`/tasks/${task.id}/complete`);
+        showToast('已完成,紀錄已寫入');
+        refreshCoinPill();
+      } else {
+        await apiPatch(`/tasks/${task.id}/uncomplete`);
+        showToast('已取消,金幣已收回');
+        refreshCoinPill();
+      }
+      onChange();
+    } catch (e) {
+      showToast('操作失敗:' + fmtErr(e), true);
+      cb.checked = !cb.checked;
+    }
+  });
+  const span = document.createElement('span');
+  span.textContent = `${task.title}（${freqLabel(task.frequency)}・${task.taskDate}）`;
+  row.appendChild(cb);
+  row.appendChild(span);
+  return row;
+}
+
+function freqLabel(f) {
+  return { DAILY: '每日', WEEKLY: '每週', ONE_TIME: '一次性' }[f] || f;
+}
+
+function buildAddGoalInline(type, parentId, onAdded, domainIdOverride) {
+  const wrap = document.createElement('div');
+  wrap.className = 'add-inline';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = type === 'LONG' ? '新增長期目標...' : type === 'MID' ? '新增中期目標...' : '新增短期目標...';
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  const btn = document.createElement('button');
+  btn.className = 'btn small';
+  btn.textContent = '新增';
+  btn.onclick = async () => {
+    const title = input.value.trim();
+    if (!title) { showToast('請輸入標題', true); return; }
+    try {
+      await apiPost('/goals', {
+        domainId: domainIdOverride || state.selectedDomainId,
+        parentId: parentId,
+        type: type,
+        title: title,
+        targetDate: dateInput.value || null,
+      });
+      input.value = '';
+      showToast('目標已新增');
+      onAdded();
+    } catch (e) {
+      showToast('新增失敗:' + fmtErr(e), true);
+    }
+  };
+  wrap.appendChild(input);
+  wrap.appendChild(dateInput);
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+function buildAddTaskInline(goalId, onAdded) {
+  const wrap = document.createElement('div');
+  wrap.className = 'add-inline';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = '新增任務...';
+  const freq = document.createElement('select');
+  ['DAILY', 'WEEKLY', 'ONE_TIME'].forEach((f) => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = freqLabel(f);
+    freq.appendChild(opt);
+  });
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.value = new Date().toISOString().slice(0, 10);
+  const btn = document.createElement('button');
+  btn.className = 'btn small';
+  btn.textContent = '新增';
+  btn.onclick = async () => {
+    const title = input.value.trim();
+    if (!title) { showToast('請輸入任務標題', true); return; }
+    try {
+      await apiPost('/tasks', { goalId, title, frequency: freq.value, taskDate: dateInput.value });
+      input.value = '';
+      showToast('任務已新增');
+      onAdded();
+    } catch (e) {
+      showToast('新增失敗:' + fmtErr(e), true);
+    }
+  };
+  wrap.appendChild(input);
+  wrap.appendChild(freq);
+  wrap.appendChild(dateInput);
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+// ---------- 今日任務 ----------
+async function loadToday() {
+  const listEl = document.getElementById('todayList');
+  listEl.innerHTML = '載入中...';
+  let tasks;
+  try {
+    tasks = await apiGet('/tasks/today');
+  } catch (e) {
+    listEl.innerHTML = '<div class="empty">讀取失敗:' + escapeHtml(fmtErr(e)) + '</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  if (!tasks.length) {
+    listEl.innerHTML = '<div class="empty">今天還沒有任務,去「目標地圖」底下新增一個吧</div>';
+    return;
+  }
+  tasks.forEach((t) => {
+    const row = document.createElement('div');
+    row.className = 'today-item' + (t.completed ? ' done' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = t.completed;
+    cb.addEventListener('change', async () => {
+      try {
+        if (cb.checked) {
+          await apiPatch(`/tasks/${t.id}/complete`);
+          showToast('已完成,紀錄已寫入');
+          refreshCoinPill();
+        } else {
+          await apiPatch(`/tasks/${t.id}/uncomplete`);
+          showToast('已取消,金幣已收回');
+          refreshCoinPill();
+        }
+        loadToday();
+      } catch (e) {
+        showToast('操作失敗:' + fmtErr(e), true);
+      }
+    });
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML = `<div class="title">${escapeHtml(t.title)}</div><div class="path">${escapeHtml(t.domainName)} › ${escapeHtml(t.goalTitle)} ・ ${freqLabel(t.frequency)}</div>`;
+    row.appendChild(cb);
+    row.appendChild(info);
+    listEl.appendChild(row);
+  });
+}
+
+// ---------- 完成紀錄 ----------
+async function loadHistory() {
+  const body = document.getElementById('logBody');
+  const emptyEl = document.getElementById('logEmpty');
+  body.innerHTML = '';
+  emptyEl.innerHTML = '';
+  let logs;
+  try {
+    logs = await apiGet('/completion-logs');
+  } catch (e) {
+    emptyEl.innerHTML = '<div class="empty">讀取失敗:' + escapeHtml(fmtErr(e)) + '</div>';
+    return;
+  }
+  if (!logs.length) {
+    emptyEl.innerHTML = '<div class="empty">還沒有完成紀錄,去打勾完成一個任務試試看</div>';
+    return;
+  }
+  logs.forEach((l) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(l.completedDate)}</td>
+      <td><span class="chip" style="background:${(DOMAIN_COLORS[colorKeyForDomain(l.domainId)] || DOMAIN_COLORS.accent).bg};color:${(DOMAIN_COLORS[colorKeyForDomain(l.domainId)] || DOMAIN_COLORS.accent).text}">${escapeHtml(l.domainName)}</span></td>
+      <td>${escapeHtml(l.goalTitle)}</td>
+      <td>${escapeHtml(l.taskTitle)}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+function colorKeyForDomain(domainId) {
+  const d = state.domains.find((x) => x.id === domainId);
+  return d ? d.color : 'accent';
+}
+
+// ---------- 金幣 / 獎勵中心 ----------
+async function refreshCoinPill() {
+  try {
+    const { balance } = await apiGet('/coins/balance');
+    document.getElementById('coinPill').textContent = `🪙 ${balance} 枚`;
+  } catch (e) {
+    // 餘額顯示失敗不影響其他功能,靜默處理就好
+  }
+}
+
+async function doCheckin() {
+  const btn = document.getElementById('checkinBtn');
+  btn.disabled = true;
+  try {
+    await api('/coins/checkin', { method: 'POST' });
+    showToast('簽到成功,+10 金幣');
+    refreshCoinPill();
+  } catch (e) {
+    showToast(fmtErr(e), true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadRewards() {
+  await refreshCoinPill();
+  const grid = document.getElementById('rewardGrid');
+  grid.innerHTML = '載入中...';
+  let rewards;
+  try {
+    rewards = await apiGet('/rewards');
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">讀取失敗:' + escapeHtml(fmtErr(e)) + '</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  if (!rewards.length) {
+    grid.innerHTML = '<div class="empty">還沒有自訂獎勵,下面新增一個吧</div>';
+  }
+  rewards.forEach((r) => {
+    const card = document.createElement('div');
+    card.className = 'reward-card';
+    card.innerHTML = `
+      <div class="title">${escapeHtml(r.title)}</div>
+      <div class="cost">🪙 ${r.cost} 枚</div>
+      <div class="row">
+        <button class="btn small redeem" ${r.affordable ? '' : 'disabled'}>兌換</button>
+        <button class="btn ghost small">刪除</button>
+      </div>
+    `;
+    card.querySelector('.redeem').onclick = async () => {
+      try {
+        await api(`/rewards/${r.id}/redeem`, { method: 'POST' });
+        showToast('兌換成功!');
+        loadRewards();
+      } catch (e) {
+        showToast(fmtErr(e), true);
+      }
+    };
+    card.querySelectorAll('button')[1].onclick = async () => {
+      try {
+        await apiDelete(`/rewards/${r.id}`);
+        loadRewards();
+      } catch (e) {
+        showToast('刪除失敗:' + fmtErr(e), true);
+      }
+    };
+    grid.appendChild(card);
+  });
+
+  const logBody = document.getElementById('coinLogBody');
+  const logEmpty = document.getElementById('coinLogEmpty');
+  logBody.innerHTML = '';
+  logEmpty.innerHTML = '';
+  let history;
+  try {
+    history = await apiGet('/coins/transactions');
+  } catch (e) {
+    logEmpty.innerHTML = '<div class="empty">讀取失敗</div>';
+    return;
+  }
+  if (!history.length) {
+    logEmpty.innerHTML = '<div class="empty">還沒有任何金幣紀錄</div>';
+    return;
+  }
+  const reasonLabel = { CHECKIN: '每日簽到', TASK_COMPLETE: '完成任務', GOAL_COMPLETE: '完成目標', REWARD_REDEEM: '兌換獎勵' };
+  history.forEach((tx) => {
+    const tr = document.createElement('tr');
+    const sign = tx.amount > 0 ? '+' : '';
+    const color = tx.amount > 0 ? '#16a34a' : '#dc2626';
+    tr.innerHTML = `
+      <td>${escapeHtml(tx.createdAt ? tx.createdAt.replace('T', ' ').slice(0, 16) : '')}</td>
+      <td>${escapeHtml(reasonLabel[tx.reason] || tx.reason)}</td>
+      <td style="color:${color};font-weight:700">${sign}${tx.amount}</td>
+      <td class="muted">${escapeHtml(tx.note || '')}</td>
+    `;
+    logBody.appendChild(tr);
+  });
+}
+
+async function submitNewReward() {
+  const title = document.getElementById('rewardTitleInput').value.trim();
+  const cost = parseInt(document.getElementById('rewardCostInput').value, 10);
+  if (!title) { showToast('請輸入獎勵名稱', true); return; }
+  if (!cost || cost <= 0) { showToast('請輸入正確的金幣數量', true); return; }
+  try {
+    await apiPost('/rewards', { title, cost });
+    document.getElementById('rewardTitleInput').value = '';
+    document.getElementById('rewardCostInput').value = '';
+    showToast('獎勵已新增');
+    loadRewards();
+  } catch (e) {
+    showToast('新增失敗:' + fmtErr(e), true);
+  }
+}
+
+// ---------- 小工具 ----------
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ---------- 初始化 ----------
+document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+loadDashboard();
+refreshCoinPill();
+</script>
+</body>
+</html>

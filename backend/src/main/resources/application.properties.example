@@ -1,0 +1,36 @@
+# ====================================================
+# 資料庫連線設定
+# 本機開發:直接用下面的預設值(localhost + 你本機MySQL帳密)
+# 部署到 Railway 時:Railway 會自動注入 DB_URL / DB_USERNAME / DB_PASSWORD 這幾個環境變數,
+# 到時候直接覆蓋掉下面的預設值,不用改程式碼
+# ====================================================
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/goal_tracker?useSSL=false&serverTimezone=Asia/Taipei&createDatabaseIfNotExist=true}
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# ====================================================
+# JPA / Hibernate 設定
+# ddl-auto=update:第一次啟動會依照 Entity 自動建表,之後改欄位也會自動同步
+# 本地開發先用 update 比較方便;真正上線建議改成 validate,改用 database/schema.sql 建表
+# show-sql=true:方便你在 console 看到實際送出的 SQL,對照筆記學到的語法
+# ====================================================
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.open-in-view=false
+
+# ====================================================
+# 伺服器埠號
+# 本機預設 8080;Railway 會自動注入 PORT 環境變數,程式要吃這個變數
+# ====================================================
+server.port=${PORT:8080}
+
+# ====================================================
+# 允許前端(GitHub Pages)跨網域呼叫 API
+# 本機開發預設允許 127.0.0.1 開的靜態頁面(例如 VS Code Live Server)
+# 部署後把這個改成你的 GitHub Pages 網址,例如:https://你的帳號.github.io
+# ====================================================
+app.cors.allowed-origins=${CORS_ORIGINS:http://localhost:5500,http://127.0.0.1:5500}
+
+spring.application.name=goal-tracker

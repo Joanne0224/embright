@@ -1,0 +1,14 @@
+# Maven 編譯產生的檔案,體積大又是機器產生的,不用進版控
+backend/target/
+
+# 各種 IDE 自己的設定檔,每個人電腦不一樣,不該共用
+.vscode/
+.idea/
+*.iml
+
+# 作業系統自己產生的檔案
+.DS_Store
+Thumbs.db
+
+# 重要:含有真實資料庫密碼的設定檔,絕對不能上傳到 GitHub
+backend/src/main/resources/application.properties
