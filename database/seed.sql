@@ -4,7 +4,7 @@
 -- 用 session 變數接住 LAST_INSERT_ID(),避免硬寫死 id 出錯
 -- ============================================================
 
-USE goal_tracker;
+USE railway;
 
 -- ---------- 面向:工作 ----------
 INSERT INTO domains (name, color, sort_order) VALUES ('工作', 'accent', 0);
