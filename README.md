@@ -85,7 +85,7 @@ mvn spring-boot:run
 ### 前端 → GitHub Pages
 
 1. 把整個 `embright` 資料夾推上 GitHub(見下方「推上 GitHub」)
-2. GitHub repo 頁面 → Settings → Pages → Source 選 `main` branch,資料夾選 `/frontend`
+2. GitHub repo 頁面 → Settings → Pages → Source 選 `main` branch,資料夾選 `/docs`
 3. 存檔後幾分鐘,前端網址會是 `https://你的帳號.github.io/repo名稱/`
 
 ### 後端 + 資料庫 → Railway
