@@ -1,5 +1,6 @@
 package com.goaltracker.service;
 
+import com.goaltracker.auth.CurrentUserHolder;
 import com.goaltracker.dto.CoinBalanceResponse;
 import com.goaltracker.dto.CoinTransactionResponse;
 import com.goaltracker.entity.CoinReason;
@@ -12,11 +13,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 金幣系統的核心服務。
- *
- * award() 是唯一「寫入」金幣紀錄的入口——不管是簽到、完成任務、完成目標、還是兌換獎勵(負數),
- * 全部都要經過這個方法。集中成單一入口的好處:以後如果要加「防止重複發放」之類的規則,
- * 只要改這一個地方,不用擔心某個呼叫端漏改。
+ * 金幣系統的核心服務。加了登入系統之後,每個人的金幣是分開算的——
+ * 餘額查詢、簽到、發放獎勵,全部都會先看 CurrentUserHolder.getUserId() 是誰。
  */
 @Service
 public class CoinService {
@@ -32,23 +30,24 @@ public class CoinService {
     }
 
     public CoinBalanceResponse getBalance() {
-        return new CoinBalanceResponse(coinTransactionRepository.getBalance());
+        return new CoinBalanceResponse(coinTransactionRepository.getBalance(CurrentUserHolder.getUserId()));
     }
 
     public List<CoinTransactionResponse> getHistory() {
-        return coinTransactionRepository.findAllByOrderByCreatedAtDesc()
+        return coinTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(CurrentUserHolder.getUserId())
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    // 每日簽到:一天只能簽一次
+    // 每日簽到:一天只能簽一次(依使用者分開計算)
     public CoinBalanceResponse checkin() {
+        Long userId = CurrentUserHolder.getUserId();
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
         LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
 
-        boolean alreadyCheckedIn = coinTransactionRepository.existsByReasonAndCreatedAtBetween(
-                CoinReason.CHECKIN, startOfToday, startOfTomorrow);
+        boolean alreadyCheckedIn = coinTransactionRepository.existsByUserIdAndReasonAndCreatedAtBetween(
+                userId, CoinReason.CHECKIN, startOfToday, startOfTomorrow);
         if (alreadyCheckedIn) {
             throw new IllegalArgumentException("今天已經簽到過了,明天再來吧");
         }
@@ -62,8 +61,7 @@ public class CoinService {
         award(TASK_COMPLETE_REWARD, CoinReason.TASK_COMPLETE, taskId, "完成任務");
     }
 
-    // 取消完成任務時呼叫——把剛剛發的金幣收回來,讓「完成/取消」這兩個動作互相對稱,
-    // 不然使用者可以靠「打勾→取消→再打勾」無限刷金幣(這是你自己測出來的那個 bug)
+    // 取消完成任務時呼叫——把剛剛發的金幣收回來,讓「完成/取消」這兩個動作互相對稱
     public void reverseTaskComplete(Long taskId) {
         award(-TASK_COMPLETE_REWARD, CoinReason.TASK_COMPLETE, taskId, "取消完成任務(收回獎勵)");
     }
@@ -80,6 +78,7 @@ public class CoinService {
 
     private void award(int amount, CoinReason reason, Long referenceId, String note) {
         CoinTransaction tx = new CoinTransaction();
+        tx.setUserId(CurrentUserHolder.getUserId());
         tx.setAmount(amount);
         tx.setReason(reason);
         tx.setReferenceId(referenceId);

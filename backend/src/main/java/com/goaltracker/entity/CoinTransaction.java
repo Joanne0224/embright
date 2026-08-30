@@ -16,6 +16,10 @@ public class CoinTransaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 這筆金幣紀錄屬於哪個使用者
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     // 正數 = 賺到的金幣;負數 = 花掉的金幣
     @Column(nullable = false)
     private Integer amount;
@@ -40,6 +44,9 @@ public class CoinTransaction {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public Integer getAmount() { return amount; }
     public void setAmount(Integer amount) { this.amount = amount; }

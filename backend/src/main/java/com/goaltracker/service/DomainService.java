@@ -1,5 +1,6 @@
 package com.goaltracker.service;
 
+import com.goaltracker.auth.CurrentUserHolder;
 import com.goaltracker.dto.DomainRequest;
 import com.goaltracker.dto.DomainResponse;
 import com.goaltracker.entity.Domain;
@@ -14,10 +15,9 @@ import java.util.List;
 /**
  * 面向(Domain)的商業邏輯層。
  *
- * 為什麼 Controller 不直接呼叫 Repository、要多一層 Service?(呼應第10、17、18堂筆記)
- * - Controller 只負責「接請求、回응」,不該知道資料庫怎麼查
- * - 像「算這個面向有幾個長期目標」這種跨表邏輯,屬於商業邏輯,放 Service 層才對
- * - 之後如果要加規則(例如:面向名稱不能重複),只要改 Service,Controller 完全不用動
+ * 加了登入系統之後,每一個方法都要多做一件事:「只處理屬於目前登入使用者的資料」。
+ * CurrentUserHolder.getUserId() 會拿到 AuthFilter 事先解析好的使用者 id——
+ * 這樣 Controller 完全不用改,呼叫方式跟以前一模一樣,商業邏輯層自己把「是誰在問」這件事處理掉。
  */
 @Service
 public class DomainService {
@@ -31,19 +31,23 @@ public class DomainService {
     }
 
     public List<DomainResponse> getAll() {
-        return domainRepository.findAllByOrderBySortOrderAsc()
+        Long userId = CurrentUserHolder.getUserId();
+        return domainRepository.findAllByUserIdOrderBySortOrderAsc(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     public DomainResponse create(DomainRequest request) {
+        Long userId = CurrentUserHolder.getUserId();
+
         Domain domain = new Domain();
+        domain.setUserId(userId);
         domain.setName(request.name());
         domain.setColor(request.color() != null ? request.color() : "blue");
 
-        // 沒指定排序值的話,自動排到最後面(目前最大值 + 1)
-        int nextOrder = domainRepository.findAllByOrderBySortOrderAsc().stream()
+        // 沒指定排序值的話,自動排到最後面(這個使用者目前最大值 + 1)
+        int nextOrder = domainRepository.findAllByUserIdOrderBySortOrderAsc(userId).stream()
                 .mapToInt(Domain::getSortOrder)
                 .max()
                 .orElse(-1) + 1;
@@ -54,8 +58,7 @@ public class DomainService {
     }
 
     public DomainResponse update(Long id, DomainRequest request) {
-        Domain domain = domainRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的面向"));
+        Domain domain = findOwnedOrThrow(id);
 
         domain.setName(request.name());
         if (request.color() != null) domain.setColor(request.color());
@@ -67,7 +70,10 @@ public class DomainService {
 
     // 上下箭頭調整順序:跟相鄰的那個面向交換 sortOrder 值
     public List<DomainResponse> reorder(Long id, String direction) {
-        List<Domain> all = domainRepository.findAllByOrderBySortOrderAsc();
+        Long userId = CurrentUserHolder.getUserId();
+        findOwnedOrThrow(id); // 確認這個面向真的是這個使用者的,不是別人的
+
+        List<Domain> all = domainRepository.findAllByUserIdOrderBySortOrderAsc(userId);
         int index = -1;
         for (int i = 0; i < all.size(); i++) {
             if (all.get(i).getId().equals(id)) {
@@ -98,8 +104,7 @@ public class DomainService {
     }
 
     public void delete(Long id) {
-        Domain domain = domainRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的面向"));
+        Domain domain = findOwnedOrThrow(id);
 
         boolean hasGoals = !goalRepository.findByDomainId(id).isEmpty();
         if (hasGoals) {
@@ -107,6 +112,17 @@ public class DomainService {
         }
 
         domainRepository.delete(domain);
+    }
+
+    // 找出這個面向,並且順便確認它真的屬於目前登入的使用者——
+    // 沒有這一層檢查的話,登入的人 A 理論上可以用 id 猜、去改到使用者 B 的資料,這是資安漏洞
+    private Domain findOwnedOrThrow(Long id) {
+        Domain domain = domainRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的面向"));
+        if (!domain.getUserId().equals(CurrentUserHolder.getUserId())) {
+            throw new ResourceNotFoundException("找不到 id=" + id + " 的面向");
+        }
+        return domain;
     }
 
     private DomainResponse toResponse(Domain domain) {

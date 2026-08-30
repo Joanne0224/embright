@@ -17,14 +17,28 @@ CREATE DATABASE IF NOT EXISTS goal_tracker
 USE goal_tracker;
 
 -- ------------------------------------------------------------
+-- 0. users:登入帳號(密碼是加密過的雜湊值,不是明文)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username       VARCHAR(50)  NOT NULL UNIQUE,
+    password_hash  VARCHAR(100) NOT NULL,
+    created_at     DATETIME     DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ------------------------------------------------------------
 -- 1. domains:面向(工作/學習/家庭/生活...)—— 整個階層的最上層
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS domains (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT       NOT NULL,
     name        VARCHAR(50)  NOT NULL,
     color       VARCHAR(20)  DEFAULT 'blue',
     sort_order  INT          DEFAULT 0,
-    created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP
+    created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_domains_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_domains_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
@@ -98,12 +112,15 @@ CREATE TABLE IF NOT EXISTS completion_logs (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS coin_transactions (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id        BIGINT       NOT NULL,
     amount         INT          NOT NULL,   -- 正數=賺到,負數=花掉
     reason         ENUM('CHECKIN', 'TASK_COMPLETE', 'GOAL_COMPLETE', 'REWARD_REDEEM') NOT NULL,
     reference_id   BIGINT       NULL,       -- 對應的任務/目標/獎勵 id,不強制設 FK(這三種來源表不同,用單一FK無法表達,交由應用層維護)
     note           VARCHAR(200),
     created_at     DATETIME     DEFAULT CURRENT_TIMESTAMP,
 
+    CONSTRAINT fk_coin_tx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_coin_tx_user (user_id),
     INDEX idx_coin_tx_reason (reason),
     INDEX idx_coin_tx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -113,7 +130,11 @@ CREATE TABLE IF NOT EXISTS coin_transactions (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rewards (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id      BIGINT       NOT NULL,
     title        VARCHAR(100) NOT NULL,
     cost         INT          NOT NULL,
-    created_at   DATETIME     DEFAULT CURRENT_TIMESTAMP
+    created_at   DATETIME     DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_rewards_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_rewards_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

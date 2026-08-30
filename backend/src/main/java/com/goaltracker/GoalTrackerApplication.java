@@ -3,6 +3,8 @@ package com.goaltracker;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.util.TimeZone;
+
 /**
  * 目標整理器 - 主程式進入點
  *
@@ -16,6 +18,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class GoalTrackerApplication {
 
     public static void main(String[] args) {
+        // 這行一定要在 Spring Boot 啟動之前設定:把整個程式的「現在幾點、今天幾號」都鎖定成台灣時區。
+        // 沒設定的話,Railway 這種雲端伺服器預設會用 UTC(格林威治時間),
+        // 比台灣慢 8 小時——凌晨 0 點到早上 8 點之間,伺服器認定的「今天」會跟你錯開一天,
+        // 「今日任務」「今日簽到」這種依賴「今天日期」的功能就會抓錯日期。
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
         SpringApplication.run(GoalTrackerApplication.class, args);
     }
 }

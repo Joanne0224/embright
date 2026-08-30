@@ -47,6 +47,14 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- 只拿密碼加密工具(BCrypt),不用整包 spring-boot-starter-security,
+             因為那個會自動幫所有API加上登入保護,我們想自己控制哪些API要保護、哪些不用 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+            <version>6.3.3</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

@@ -1,5 +1,6 @@
 package com.goaltracker.service;
 
+import com.goaltracker.auth.CurrentUserHolder;
 import com.goaltracker.dto.TaskRequest;
 import com.goaltracker.dto.TaskResponse;
 import com.goaltracker.entity.CompletionLog;
@@ -24,6 +25,9 @@ import java.util.List;
  * 這裡最重要的方法是 complete():打勾完成任務的同時,要「同步寫入」completion_logs,
  * 這兩個動作必須綁在同一個交易(Transaction)裡——要嘛兩個都成功,要嘛兩個都失敗,
  * 不可以任務標記完成了、但歷史紀錄卻沒寫進去(資料會不一致)。這就是 @Transactional 的作用。
+ *
+ * 資安提醒:每一個查詢/操作進來的 id,都要先確認它掛的目標、目標掛的面向,
+ * 真的屬於目前登入的使用者,不然會出現「拿著別人的 id 也能查到別人資料」的漏洞。
  */
 @Service
 public class TaskService {
@@ -45,6 +49,7 @@ public class TaskService {
     }
 
     public List<TaskResponse> getByGoalId(Long goalId) {
+        assertGoalOwned(goalId);
         return taskRepository.findByGoalId(goalId)
                 .stream()
                 .map(this::toResponse)
@@ -52,17 +57,18 @@ public class TaskService {
     }
 
     // 「今日任務」頁面用:查指定日期、跨所有面向的任務,未完成的排前面
+    // 只回傳「屬於目前登入使用者」的任務——這裡沒有單一 id 可以檢查,所以逐筆過濾
     public List<TaskResponse> getByDate(LocalDate date) {
         return taskRepository.findByTaskDateOrderByCompletedAsc(date)
                 .stream()
+                .filter(this::isOwnedByCurrentUser)
                 .map(this::toResponse)
                 .toList();
     }
 
     public TaskResponse create(TaskRequest request) {
-        // 確認掛的目標真的存在,不能憑空掛一個不存在的 goalId
-        goalRepository.findById(request.goalId())
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + request.goalId() + " 的目標"));
+        // 確認掛的目標真的存在,而且真的是自己的面向底下的目標
+        assertGoalOwned(request.goalId());
 
         Task task = new Task();
         task.setGoalId(request.goalId());
@@ -77,8 +83,7 @@ public class TaskService {
     // 打勾完成:同步更新 task 狀態 + 寫入 completion_logs 歷史紀錄
     @Transactional
     public TaskResponse complete(Long id) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的任務"));
+        Task task = findOwnedTaskOrThrow(id);
 
         if (Boolean.TRUE.equals(task.getCompleted())) {
             return toResponse(task); // 已經完成過了,直接回傳現況,不重複寫入歷史紀錄
@@ -109,8 +114,7 @@ public class TaskService {
     // 不然「打勾→取消→再打勾」可以無限刷金幣(這正是你剛剛測出來的 bug)
     @Transactional
     public TaskResponse uncomplete(Long id) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的任務"));
+        Task task = findOwnedTaskOrThrow(id);
 
         if (!Boolean.TRUE.equals(task.getCompleted())) {
             return toResponse(task); // 本來就還沒完成,不用做任何事,避免重複收回金幣
@@ -132,9 +136,35 @@ public class TaskService {
     }
 
     public void delete(Long id) {
+        Task task = findOwnedTaskOrThrow(id);
+        taskRepository.delete(task);
+    }
+
+    // 確認這個 goalId 真的存在、而且它掛的面向屬於目前登入使用者,回傳這個 Goal 方便呼叫端直接用
+    private Goal assertGoalOwned(Long goalId) {
+        Goal goal = goalRepository.findById(goalId)
+                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + goalId + " 的目標"));
+        Domain domain = domainRepository.findById(goal.getDomainId()).orElse(null);
+        if (domain == null || !domain.getUserId().equals(CurrentUserHolder.getUserId())) {
+            throw new ResourceNotFoundException("找不到 id=" + goalId + " 的目標");
+        }
+        return goal;
+    }
+
+    // 找出這個任務,並確認它掛的目標、面向都屬於目前登入使用者
+    private Task findOwnedTaskOrThrow(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的任務"));
-        taskRepository.delete(task);
+        assertGoalOwned(task.getGoalId());
+        return task;
+    }
+
+    // 給 getByDate() 逐筆過濾用:安靜地檢查歸屬,查不到/不是自己的就當作 false,不丟例外
+    private boolean isOwnedByCurrentUser(Task task) {
+        Goal goal = goalRepository.findById(task.getGoalId()).orElse(null);
+        if (goal == null) return false;
+        Domain domain = domainRepository.findById(goal.getDomainId()).orElse(null);
+        return domain != null && domain.getUserId().equals(CurrentUserHolder.getUserId());
     }
 
     private TaskResponse toResponse(Task task) {

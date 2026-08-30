@@ -1,5 +1,6 @@
 package com.goaltracker.service;
 
+import com.goaltracker.auth.CurrentUserHolder;
 import com.goaltracker.dto.CoinBalanceResponse;
 import com.goaltracker.dto.RewardRequest;
 import com.goaltracker.dto.RewardResponse;
@@ -23,7 +24,7 @@ public class RewardService {
 
     public List<RewardResponse> getAll() {
         long balance = coinService.getBalance().balance();
-        return rewardRepository.findAllByOrderByCostAsc()
+        return rewardRepository.findAllByUserIdOrderByCostAsc(CurrentUserHolder.getUserId())
                 .stream()
                 .map(r -> new RewardResponse(r.getId(), r.getTitle(), r.getCost(), balance >= r.getCost()))
                 .toList();
@@ -31,6 +32,7 @@ public class RewardService {
 
     public RewardResponse create(RewardRequest request) {
         Reward reward = new Reward();
+        reward.setUserId(CurrentUserHolder.getUserId());
         reward.setTitle(request.title());
         reward.setCost(request.cost());
         Reward saved = rewardRepository.save(reward);
@@ -39,15 +41,13 @@ public class RewardService {
     }
 
     public void delete(Long id) {
-        Reward reward = rewardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的獎勵"));
+        Reward reward = findOwnedOrThrow(id);
         rewardRepository.delete(reward);
     }
 
     // 兌換獎勵:檢查金幣夠不夠,不夠就擋下來給友善訊息,不是讓餘額變負數
     public CoinBalanceResponse redeem(Long id) {
-        Reward reward = rewardRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的獎勵"));
+        Reward reward = findOwnedOrThrow(id);
 
         long balance = coinService.getBalance().balance();
         if (balance < reward.getCost()) {
@@ -57,5 +57,14 @@ public class RewardService {
 
         coinService.spend(reward.getCost(), reward.getId(), "兌換:" + reward.getTitle());
         return coinService.getBalance();
+    }
+
+    private Reward findOwnedOrThrow(Long id) {
+        Reward reward = rewardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("找不到 id=" + id + " 的獎勵"));
+        if (!reward.getUserId().equals(CurrentUserHolder.getUserId())) {
+            throw new ResourceNotFoundException("找不到 id=" + id + " 的獎勵");
+        }
+        return reward;
     }
 }

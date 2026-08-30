@@ -6,7 +6,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 完成紀錄(CompletionLog):任務被打勾完成時,額外寫進這張表的「事件紀錄」,永久保留。
+ * 完成紀錄(CompletionLog):任務被打勾完成、或整個目標被標記達成時,寫進這張表的「事件紀錄」,永久保留。
+ *
+ * taskId 允許是 null——因為「標記整個目標達成」這個動作,不是針對某一筆任務,
+ * 沒有對應的 task 可以填,但這次達成一樣要留下永久紀錄,所以 taskId 留空、
+ * 只靠 goalId、domainId 記錄「哪個目標」「哪個面向」達成了。
+ *
  * 這個類別沒有用 Lombok,getter/setter 都是手寫的(原因見 Domain.java 的註解)。
  */
 @Entity
@@ -17,7 +22,7 @@ public class CompletionLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "task_id", nullable = false)
+    @Column(name = "task_id")
     private Long taskId;
 
     @Column(name = "goal_id", nullable = false)

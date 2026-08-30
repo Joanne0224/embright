@@ -2,12 +2,20 @@
 -- 範例資料:讓第一次啟動系統時,畫面不是空的,方便你自己先測試、也方便老師直接看到成果
 -- 使用方式:先執行 schema.sql 建表,再執行這份 seed.sql
 -- 用 session 變數接住 LAST_INSERT_ID(),避免硬寫死 id 出錯
+--
+-- 示範帳號:username = demo,password = demo1234
+-- (密碼已經用 BCrypt 加密存進去,不是明文——你登入時打的是明文,系統會自動幫你比對)
 -- ============================================================
 
-USE railway;
+USE goal_tracker;
+
+-- ---------- 示範使用者帳號 ----------
+INSERT INTO users (username, password_hash)
+VALUES ('demo', '$2b$10$UvkBz6iDiaf9BM4pYF2aouQxWHZ3irbiMFf5M6CNh97l69EzWH7sC');
+SET @demo_user = LAST_INSERT_ID();
 
 -- ---------- 面向:工作 ----------
-INSERT INTO domains (name, color, sort_order) VALUES ('工作', 'accent', 0);
+INSERT INTO domains (user_id, name, color, sort_order) VALUES (@demo_user, '工作', 'accent', 0);
 SET @domain_work = LAST_INSERT_ID();
 
 INSERT INTO goals (domain_id, parent_id, type, title, description, target_date, status)
@@ -33,7 +41,7 @@ INSERT INTO completion_logs (task_id, goal_id, domain_id, completed_date)
 VALUES (@task_done_work, @goal_short_work, @domain_work, CURDATE());
 
 -- ---------- 面向:學習 ----------
-INSERT INTO domains (name, color, sort_order) VALUES ('學習', 'pro', 1);
+INSERT INTO domains (user_id, name, color, sort_order) VALUES (@demo_user, '學習', 'pro', 1);
 SET @domain_study = LAST_INSERT_ID();
 
 INSERT INTO goals (domain_id, parent_id, type, title, description, target_date, status)
@@ -55,18 +63,18 @@ INSERT INTO tasks (goal_id, title, frequency, task_date, completed)
 VALUES (@goal_short_study, '推上 GitHub 並部署', 'ONE_TIME', CURDATE(), FALSE);
 
 -- ---------- 面向:家庭、生活(先建立空的,示範多面向卡片並排的樣子)----------
-INSERT INTO domains (name, color, sort_order) VALUES ('家庭', 'success', 2);
-INSERT INTO domains (name, color, sort_order) VALUES ('生活', 'warning', 3);
+INSERT INTO domains (user_id, name, color, sort_order) VALUES (@demo_user, '家庭', 'success', 2);
+INSERT INTO domains (user_id, name, color, sort_order) VALUES (@demo_user, '生活', 'warning', 3);
 
 -- ---------- 金幣系統範例資料 ----------
 -- 呼應上面已經完成的那筆任務(task_done_work),補一筆對應的金幣紀錄,讓餘額跟紀錄對得起來
-INSERT INTO coin_transactions (amount, reason, reference_id, note)
-VALUES (5, 'TASK_COMPLETE', @task_done_work, '完成任務');
+INSERT INTO coin_transactions (user_id, amount, reason, reference_id, note)
+VALUES (@demo_user, 5, 'TASK_COMPLETE', @task_done_work, '完成任務');
 
-INSERT INTO coin_transactions (amount, reason, reference_id, note)
-VALUES (10, 'CHECKIN', NULL, '每日簽到');
+INSERT INTO coin_transactions (user_id, amount, reason, reference_id, note)
+VALUES (@demo_user, 10, 'CHECKIN', NULL, '每日簽到');
 
 -- 幾個自訂獎勵範例,讓「獎勵中心」分頁一開始不是空的
-INSERT INTO rewards (title, cost) VALUES ('追一集喜歡的劇', 30);
-INSERT INTO rewards (title, cost) VALUES ('買一杯手搖飲', 50);
-INSERT INTO rewards (title, cost) VALUES ('耍廢半小時不內疚', 20);
+INSERT INTO rewards (user_id, title, cost) VALUES (@demo_user, '追一集喜歡的劇', 30);
+INSERT INTO rewards (user_id, title, cost) VALUES (@demo_user, '買一杯手搖飲', 50);
+INSERT INTO rewards (user_id, title, cost) VALUES (@demo_user, '耍廢半小時不內疚', 20);

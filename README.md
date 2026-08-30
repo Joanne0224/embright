@@ -44,11 +44,15 @@ mysql -u root -p < database/seed.sql
 
 ### 2. 設定資料庫密碼
 
-打開 `backend/src/main/resources/application.properties`,如果你的 MySQL root 密碼不是空的,把這一行改成你的密碼:
+`backend/src/main/resources/application.properties` 這個檔案**含有你的真實 MySQL 密碼,已經被 `.gitignore` 排除,不會被推上 GitHub**。第一次設定時:
 
-```properties
-spring.datasource.password=${DB_PASSWORD:你的MySQL密碼}
-```
+1. 複製一份範例檔:把 `application.properties.example` 複製一份,改名成 `application.properties`(如果你照這份 README 一路做下來,這個檔案應該已經存在,不用重做)
+2. 打開 `application.properties`,如果你的 MySQL root 密碼不是空的,把這一行改成你的密碼:
+   ```properties
+   spring.datasource.password=${DB_PASSWORD:你的MySQL密碼}
+   ```
+
+**這是為什麼**:`application.properties.example` 是「範本」,不含任何真密碼,可以安心進版控,讓其他人(或未來的你)知道要填哪些欄位;真正含有密碼的 `application.properties` 被 `.gitignore` 擋掉,不會被上傳。
 
 ### 3. 用 VS Code 打開 backend 資料夾,啟動後端
 
@@ -85,7 +89,7 @@ mvn spring-boot:run
 ### 前端 → GitHub Pages
 
 1. 把整個 `embright` 資料夾推上 GitHub(見下方「推上 GitHub」)
-2. GitHub repo 頁面 → Settings → Pages → Source 選 `main` branch,資料夾選 `/docs`
+2. GitHub repo 頁面 → Settings → Pages → Source 選 `main` branch,資料夾選 `/frontend`
 3. 存檔後幾分鐘,前端網址會是 `https://你的帳號.github.io/repo名稱/`
 
 ### 後端 + 資料庫 → Railway
